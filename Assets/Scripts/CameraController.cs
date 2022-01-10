@@ -57,7 +57,7 @@ public class CameraController : MonoBehaviour
 
     void Start()
     {
-        //currentState = CameraStates.Free;
+        currentState = CameraStates.Stoped;
         zoomLevel = Camera.main.orthographicSize;
     }
 

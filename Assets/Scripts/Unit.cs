@@ -4,109 +4,134 @@ using System.Collections;
 public class Unit : MonoBehaviour
 {
 
-	const float minPathUpdateTime = .2f;
-	const float pathUpdateMoveThreshold = .5f;
+    const float minPathUpdateTime = .2f;
+    const float pathUpdateMoveThreshold = .5f;
 
-	public Transform target;
-	public float speed = 20;
-	public float turnSpeed = 3;
-	public float turnDst = 5;
-	public float stoppingDst = 10;
+    public Transform target;
+    public float speed = 20;
+    public float turnSpeed = 3;
+    public float turnDst = 5;
+    public float stoppingDst = 10;
 
-	Path path;
+    Path path;
 
-	void Start()
-	{
-		StartCoroutine(UpdatePath());
-	}
+    public enum SelectionState { Selected, Unselected };
+    public SelectionState currentSelectionState = SelectionState.Unselected;
 
-	public void OnPathFound(Vector3[] waypoints, bool pathSuccessful)
-	{
-		if (pathSuccessful)
-		{
-			path = new Path(waypoints, transform.position, turnDst, stoppingDst);
+    private Outline outline;
 
-			StopCoroutine("FollowPath");
-			StartCoroutine("FollowPath");
-		}
-	}
+    void Start()
+    {
+        outline = gameObject.GetComponent<Outline>();
+        ChangeSelectionState(SelectionState.Unselected);
+        GameObject newTarget = new GameObject(gameObject.name + " Target");
+        target = newTarget.transform;
+        target.position = transform.position;
+        newTarget.transform.SetParent(GameObject.Find("Targets").transform);
+        StartCoroutine(UpdatePath());
+    }
 
-	IEnumerator UpdatePath()
-	{
+    public void OnPathFound(Vector3[] waypoints, bool pathSuccessful)
+    {
+        if (pathSuccessful)
+        {
+            path = new Path(waypoints, transform.position, turnDst, stoppingDst);
 
-		if (Time.timeSinceLevelLoad < .3f)
-		{
-			yield return new WaitForSeconds(.3f);
-		}
-		PathRequestManager.RequestPath(new PathRequest(transform.position, target.position, OnPathFound));
+            StopCoroutine("FollowPath");
+            StartCoroutine("FollowPath");
+        }
+    }
 
-		float sqrMoveThreshold = pathUpdateMoveThreshold * pathUpdateMoveThreshold;
-		Vector3 targetPosOld = target.position;
+    public void ChangeSelectionState(SelectionState newState)
+    {
+        if(newState == SelectionState.Selected)
+        {
+            outline.OutlineColor = new Color(1, 0, 0, 1);
+            outline.OutlineWidth = 5f;
+        }
+        else if (newState == SelectionState.Unselected)
+        {
+            outline.OutlineColor = new Color(1, 0, 0, 0);
+            outline.OutlineWidth = 0f;
+        }
+    }
 
-		while (true)
-		{
-			yield return new WaitForSeconds(minPathUpdateTime);
-			print(((target.position - targetPosOld).sqrMagnitude) + "    " + sqrMoveThreshold);
-			if ((target.position - targetPosOld).sqrMagnitude > sqrMoveThreshold)
-			{
-				PathRequestManager.RequestPath(new PathRequest(transform.position, target.position, OnPathFound));
-				targetPosOld = target.position;
-			}
-		}
-	}
+    IEnumerator UpdatePath()
+    {
 
-	IEnumerator FollowPath()
-	{
+        if (Time.timeSinceLevelLoad < .3f)
+        {
+            yield return new WaitForSeconds(.3f);
+        }
+        PathRequestManager.RequestPath(new PathRequest(transform.position, target.position, OnPathFound));
 
-		bool followingPath = true;
-		int pathIndex = 0;
-		transform.LookAt(path.lookPoints[0]);
+        float sqrMoveThreshold = pathUpdateMoveThreshold * pathUpdateMoveThreshold;
+        Vector3 targetPosOld = target.position;
 
-		float speedPercent = 1;
+        while (true)
+        {
+            yield return new WaitForSeconds(minPathUpdateTime);
+            print(((target.position - targetPosOld).sqrMagnitude) + "    " + sqrMoveThreshold);
+            if ((target.position - targetPosOld).sqrMagnitude > sqrMoveThreshold)
+            {
+                PathRequestManager.RequestPath(new PathRequest(transform.position, target.position, OnPathFound));
+                targetPosOld = target.position;
+            }
+        }
+    }
 
-		while (followingPath)
-		{
-			Vector2 pos2D = new Vector2(transform.position.x, transform.position.z);
-			while (path.turnBoundaries[pathIndex].HasCrossedLine(pos2D))
-			{
-				if (pathIndex == path.finishLineIndex)
-				{
-					followingPath = false;
-					break;
-				}
-				else
-				{
-					pathIndex++;
-				}
-			}
+    IEnumerator FollowPath()
+    {
 
-			if (followingPath)
-			{
+        bool followingPath = true;
+        int pathIndex = 0;
+        transform.LookAt(path.lookPoints[0]);
 
-				if (pathIndex >= path.slowDownIndex && stoppingDst > 0)
-				{
-					speedPercent = Mathf.Clamp01(path.turnBoundaries[path.finishLineIndex].DistanceFromPoint(pos2D) / stoppingDst);
-					if (speedPercent < 0.01f)
-					{
-						followingPath = false;
-					}
-				}
+        float speedPercent = 1;
 
-				Quaternion targetRotation = Quaternion.LookRotation(path.lookPoints[pathIndex] - transform.position);
-				transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * turnSpeed);
-				transform.Translate(Vector3.forward * Time.deltaTime * speed * speedPercent, Space.Self);
-			}
+        while (followingPath)
+        {
+            Vector2 pos2D = new Vector2(transform.position.x, transform.position.z);
+            while (path.turnBoundaries[pathIndex].HasCrossedLine(pos2D))
+            {
+                if (pathIndex == path.finishLineIndex)
+                {
+                    followingPath = false;
+                    break;
+                }
+                else
+                {
+                    pathIndex++;
+                }
+            }
 
-			yield return null;
+            if (followingPath)
+            {
 
-		}
-	}
+                if (pathIndex >= path.slowDownIndex && stoppingDst > 0)
+                {
+                    speedPercent = Mathf.Clamp01(path.turnBoundaries[path.finishLineIndex].DistanceFromPoint(pos2D) / stoppingDst);
+                    if (speedPercent < 0.01f)
+                    {
+                        followingPath = false;
+                    }
+                }
 
-	public void OnDrawGizmos()
-	{
-		if (path != null)
-		{
-			path.DrawWithGizmos();
-		}
-	}
+                Quaternion targetRotation = Quaternion.LookRotation(path.lookPoints[pathIndex] - transform.position);
+                transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * turnSpeed);
+                transform.Translate(Vector3.forward * Time.deltaTime * speed * speedPercent, Space.Self);
+            }
+
+            yield return null;
+
+        }
+    }
+
+    public void OnDrawGizmos()
+    {
+        if (path != null)
+        {
+            path.DrawWithGizmos();
+        }
+    }
 }

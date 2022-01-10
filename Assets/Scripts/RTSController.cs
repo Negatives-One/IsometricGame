@@ -1,111 +1,86 @@
-﻿//using System.Collections;
-//using System.Collections.Generic;
-//using UnityEngine;
-//using UnityEngine.UI;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
 
-//public class RTSController : MonoBehaviour
-//{
-//    public Pathfinding pathfinding;
+public class RTSController : MonoBehaviour
+{
+    public List<Unit> Units = new List<Unit>();
+    public Pathfinding pathfinding;
 
-//    public List<Unit> Units = new List<Unit>();
+    [SerializeField]
+    private LayerMask defaultLayer;
+    [SerializeField]
+    private LayerMask groundLayerMask;
 
-//    private Vector3 startPos = Vector3.zero;
-//    private Vector3 endPos = Vector3.zero;
-//    [SerializeField]
-//    private Text TextUI;
+    private void Start()
+    {
 
-//    private string texto;
+    }
 
-//    private void Start()
-//    {
+    // Update is called once per frame
+    private void Update()
+    {
+        RightClick();
+        LeftClick();
+    }
 
-//    }
+    private void RightClick()
+    {
+        if (Input.GetMouseButtonDown(1))
+        {
+            RaycastHit hit;
+            var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
-//    // Update is called once per frame
-//    private void Update()
-//    {
-//        if (Input.GetMouseButtonDown(0))
-//        {
-//            RaycastHit hit;
-//            var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out hit, groundLayerMask))
+            {
+                print(hit.collider.name);
+                if (hit.collider.gameObject.tag == "Ground")
+                {
+                    for (int i = 0; i < Units.Count; i++)
+                    {
+                        Units[i].target.position = hit.point;
+                        //pathfinding.FindPath(Units[i].transform.position, hit.point, Units[i].gameObject);
+                        //Units[i].StartCoroutine(Units[i].FollowPath());
+                    }
+                }
+            }
+        }
+    }
 
-//            if (Physics.Raycast(ray, out hit))
-//            {
-//                {
-//                    if (hit.collider.gameObject.tag == "Building")
-//                    {
-//                        hit.collider.gameObject.GetComponent<Spawner>().LeftClicked();
-//                    }
-//                }
-//            }
-//        }
-//        RightClick();
-//        LeftClick();
-//    }
+    private void LeftClick()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            RaycastHit hit;
+            var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
-//    private void RightClick()
-//    {
-//        if (Input.GetMouseButton(1))
-//        {
-//            RaycastHit hit;
-//            var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-//            if (Physics.Raycast(ray, out hit))
-//            {
-//                if (hit.collider.gameObject.tag == "Ground")
-//                {
-//                    endPos = hit.point;
-//                    for (int i = 0; i < Units.Count; i++)
-//                    {
-//                       // Units[i].SetPath(pathfinding.FindPath(Units[i].transform.position, endPos));
-//                        Units[i].FSMUnit(Unit.States.Moving);
-//                    }
-//                    //Player.transform.position = new Vector3(endPos.x, endPos.y, endPos.z);
-//                }
-//                else if (hit.collider.gameObject.tag == "Unit" && hit.collider.gameObject.GetComponent<Unit>().isEnemy == false)
-//                {
-
-//                }
-//                else if (hit.collider.gameObject.tag == "Unit" && hit.collider.gameObject.GetComponent<Unit>().isEnemy == true)
-//                {
-
-//                }
-//            }
-//        }
-//    }
-
-//    private void LeftClick()
-//    {
-//        if (Input.GetMouseButton(0))
-//        {
-//            for (int i = 0; i < Units.Count; i++)
-//            {
-//                texto += Units[i].Name;
-//            }
-//            TextUI.text = texto;
-//            texto = null;
-//            RaycastHit hit;
-//            var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-//            if (Physics.Raycast(ray, out hit))
-//            {
-//                if (hit.collider.gameObject.tag == "Ground")
-//                {
-//                    Units.Clear();
-//                }
-//                else if (hit.collider.gameObject.tag == "Unit" && hit.collider.gameObject.GetComponent<Unit>().isEnemy == false)
-//                {
-//                    if (!Units.Contains(hit.collider.gameObject.GetComponent<Unit>()))
-//                    {
-//                        Units.Clear();
-//                        Units.Add(hit.collider.gameObject.GetComponent<Unit>());
-//                    }
-//                }
-//                else if (hit.collider.gameObject.tag == "Unit" && hit.collider.gameObject.GetComponent<Unit>().isEnemy == true)
-//                {
-
-//                }
-//            }
-//        }
-//    }
-//}
+            if (Physics.Raycast(ray, out hit))
+            {
+                print(hit.collider.name);
+                if (hit.collider.gameObject.tag == "Ground")
+                {
+                    foreach (Unit unit in Units)
+                    {
+                        unit.ChangeSelectionState(Unit.SelectionState.Unselected);
+                    }
+                    Units.Clear();
+                }
+                else if (hit.collider.gameObject.tag == "Unit")
+                {
+                    if (!Units.Contains(hit.collider.gameObject.GetComponent<Unit>()))
+                    {
+                        foreach (Unit unit in Units)
+                        {
+                            unit.ChangeSelectionState(Unit.SelectionState.Unselected);
+                        }
+                        Units.Clear();
+                        Unit unidade = hit.collider.gameObject.GetComponent<Unit>();
+                        Units.Add(unidade);
+                        unidade.ChangeSelectionState(Unit.SelectionState.Selected);
+                    }
+                }
+            }
+        }
+    }
+}
